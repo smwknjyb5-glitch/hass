@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>محاكاة الحركة والسكون</title>
+
+<!-- معاينة المشاركة على فيسبوك -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ar_AR">
+<meta property="og:title" content="محاكاة الحركة والسكون">
+<meta property="og:description" content="افهم نسبية الحركة، وأنواعها المختلفة، وكيف تُمثَّل بيانيًا — محاكاة تفاعلية.">
+<meta property="og:url" content="https://smwknjyb5-glitch.github.io/hass/">
+<meta property="og:image" content="https://smwknjyb5-glitch.github.io/hass/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://smwknjyb5-glitch.github.io/hass/preview.png">
+
 <style>
   :root{
     --navy-deep:#050b1f; --navy:#0a1636; --navy-light:#132048;
@@ -41,13 +54,14 @@
   }
   .card h2{ margin-top:0; font-size:1.3rem; color:var(--gold); }
 
-  .toolbar{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:16px; }
+  .toolbar{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:16px; align-items:center; }
   .btn{
     background:var(--navy-light); border:1px solid rgba(242,193,78,.35); color:var(--gold-soft);
-    padding:9px 20px; border-radius:24px; cursor:pointer; font-size:.9rem; transition:.2s;
+    padding:9px 20px; border-radius:24px; cursor:pointer; font-size:.9rem; transition:.2s; font-family:inherit;
   }
   .btn:hover{ background:rgba(242,193,78,.12); }
   .btn.on{ background:var(--gold); color:var(--navy-deep); font-weight:bold; box-shadow:0 0 18px rgba(242,193,78,.4); }
+  .btn.rec{ background:var(--red); color:#fff; border-color:var(--red); font-weight:bold; }
 
   canvas{
     width:100%; background:var(--navy-deep); border-radius:14px; border:1px solid rgba(255,255,255,.08); display:block;
@@ -83,6 +97,13 @@
     background:var(--navy); color:var(--text); border:1px solid rgba(242,193,78,.3);
     border-radius:8px; padding:6px 10px; font-family:Tahoma;
   }
+
+  /* ===== أدوات التسجيل والمشاركة ===== */
+  .share-card h2{ font-size:1.1rem; }
+  .share-note{ color:var(--muted); font-size:.8rem; line-height:1.8; text-align:center; margin:6px 0 0; }
+  .rec-status{ color:var(--gold-soft); font-size:.85rem; min-height:1.4em; text-align:center; margin-top:6px; }
+  .rec-dot{ display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--red); margin-inline-end:6px; animation:blink 1s infinite; vertical-align:middle; }
+  @keyframes blink{ 50%{opacity:.2;} }
 </style>
 </head>
 <body>
@@ -97,6 +118,29 @@
     <button class="tab-btn active" data-tab="relative">نسبية الحركة والسكون</button>
     <button class="tab-btn" data-tab="types">أنواع الحركة</button>
     <button class="tab-btn" data-tab="graph">الرسم البياني (الموقع-الزمن)</button>
+  </div>
+
+  <!-- ===================== SHARE / RECORD ===================== -->
+  <div class="card share-card">
+    <h2>🎬 تسجيل فيديو وحفظ صورة للنشر على فيسبوك</h2>
+    <div class="toolbar">
+      <label style="color:var(--muted);font-size:.85rem;">مدة الفيديو:</label>
+      <select id="rec-duration">
+        <option value="10">10 ثوانٍ</option>
+        <option value="15">15 ثانية</option>
+        <option value="20" selected>20 ثانية</option>
+        <option value="30">30 ثانية</option>
+        <option value="60">60 ثانية</option>
+      </select>
+      <button class="btn" id="rec-btn">🎥 تسجيل فيديو</button>
+      <button class="btn" id="shot-btn">📷 حفظ صورة</button>
+      <button class="btn" id="og-btn">🖼 صورة المعاينة (1200×630)</button>
+    </div>
+    <div class="rec-status" id="rec-status"></div>
+    <p class="share-note">
+      يُسجَّل التبويب المعروض حاليًا ويبدأ تحريكه تلقائيًا. بعد التسجيل يُحمَّل الفيديو مباشرة إلى جهازك ثم انشره على فيسبوك.<br>
+      لمعاينة الرابط على فيسبوك: اضغط «صورة المعاينة» ثم ارفع الملف <b>preview.png</b> إلى المستودع <b>hass</b> بجانب <b>index.html</b>.
+    </p>
   </div>
 
   <!-- ===================== RELATIVE MOTION ===================== -->
@@ -361,14 +405,12 @@ function drawBall(ctx,x,y,color){
 function drawTypesFrame(){
   const t = typesTime;
 
-  // uniform: x = v*t mod width
   canvasUniform.clearRect(0,0,280,140);
   canvasUniform.strokeStyle='rgba(255,255,255,.15)';
   canvasUniform.beginPath(); canvasUniform.moveTo(20,100); canvasUniform.lineTo(260,100); canvasUniform.stroke();
   const ux = 20 + ((t*40) % 240);
   drawBall(canvasUniform, ux, 100, '#4ecfa0');
 
-  // accelerated: x = 0.5*a*t^2 mod, reset periodically
   canvasAccel.clearRect(0,0,280,140);
   canvasAccel.strokeStyle='rgba(255,255,255,.15)';
   canvasAccel.beginPath(); canvasAccel.moveTo(20,100); canvasAccel.lineTo(260,100); canvasAccel.stroke();
@@ -376,7 +418,6 @@ function drawTypesFrame(){
   const ax = 20 + 0.5*24*at*at;
   drawBall(canvasAccel, Math.min(ax,260), 100, '#e8615a');
 
-  // circular
   canvasCircular.clearRect(0,0,280,140);
   const cx=140, cy=70, r=45;
   canvasCircular.strokeStyle='rgba(255,255,255,.15)';
@@ -384,7 +425,6 @@ function drawTypesFrame(){
   const angle = t*1.8;
   drawBall(canvasCircular, cx+r*Math.cos(angle), cy+r*Math.sin(angle), '#5a9bd6');
 
-  // oscillate (pendulum-like horizontal)
   canvasOscillate.clearRect(0,0,280,140);
   canvasOscillate.strokeStyle='rgba(255,255,255,.15)';
   canvasOscillate.beginPath(); canvasOscillate.moveTo(20,100); canvasOscillate.lineTo(260,100); canvasOscillate.stroke();
@@ -424,7 +464,7 @@ const graphModes = {
   rest:{
     label:'الجسم ساكن',
     explain:'الموقع لا يتغير مع مرور الزمن، لذلك يكون الرسم خطًا أفقيًا ثابتًا. هذا هو التعريف الرياضي للسكون: x = ثابت.',
-    fx:(t)=> 0.5, // constant position (fraction of max)
+    fx:(t)=> 0.5,
   },
   uniform:{
     label:'حركة منتظمة',
@@ -453,7 +493,6 @@ function drawGraph(progress){
   const pad=55;
   const mode = graphModes[graphSelect.value];
 
-  // axes
   gctx.strokeStyle='rgba(255,255,255,.25)';
   gctx.lineWidth=1.5;
   gctx.beginPath();
@@ -466,7 +505,6 @@ function drawGraph(progress){
 
   const plotW = w-pad-40, plotH = h-pad-60-30;
 
-  // curve
   gctx.strokeStyle = '#f2c14e';
   gctx.lineWidth = 3;
   gctx.beginPath();
@@ -479,14 +517,12 @@ function drawGraph(progress){
   }
   gctx.stroke();
 
-  // moving point on curve
   const yv = mode.fx(progress);
   const px = pad + progress*plotW;
   const py = (h-pad-60) - yv*plotH;
   gctx.fillStyle='#4ecfa0';
   gctx.beginPath(); gctx.arc(px,py,7,0,Math.PI*2); gctx.fill();
 
-  // track below showing object moving along a line, mapped from x value
   const trackY = h-30;
   gctx.strokeStyle='rgba(255,255,255,.15)';
   gctx.beginPath(); gctx.moveTo(pad, trackY); gctx.lineTo(w-30, trackY); gctx.stroke();
@@ -528,6 +564,221 @@ graphPlay.addEventListener('click', ()=>{
 
 graphExplain.textContent = graphModes.rest.explain;
 drawGraph(0);
+
+// ===================================================================
+// ===================== تسجيل فيديو + حفظ صورة ======================
+// ===================================================================
+const recBtn   = document.getElementById('rec-btn');
+const shotBtn  = document.getElementById('shot-btn');
+const ogBtn    = document.getElementById('og-btn');
+const recDur   = document.getElementById('rec-duration');
+const recStat  = document.getElementById('rec-status');
+
+const comp = document.createElement('canvas');
+comp.width = 1280; comp.height = 720;
+const cctx = comp.getContext('2d');
+
+function activeTab(){
+  const b = document.querySelector('.tab-btn.active');
+  return b ? b.dataset.tab : 'relative';
+}
+const TAB_TITLES = {
+  relative:'نسبية الحركة والسكون',
+  types:'أنواع الحركة',
+  graph:'العلاقة بين الموقع والزمن'
+};
+
+function paintBackground(ctx,W,H){
+  const g = ctx.createRadialGradient(W/2,0,0,W/2,0,H*1.2);
+  g.addColorStop(0,'#132048'); g.addColorStop(0.7,'#050b1f'); g.addColorStop(1,'#050b1f');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  // نجوم ثابتة (توليد حتمي)
+  let s = 12345;
+  const rnd = ()=>{ s = (s*16807) % 2147483647; return s/2147483647; };
+  for(let i=0;i<110;i++){
+    ctx.beginPath();
+    ctx.arc(rnd()*W, rnd()*H, rnd()*1.4+0.3, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(242,193,78,${0.15+rnd()*0.5})`;
+    ctx.fill();
+  }
+}
+function drawFit(ctx, src, x, y, w, h){
+  const r = Math.min(w/src.width, h/src.height);
+  const dw = src.width*r, dh = src.height*r;
+  const dx = x + (w-dw)/2, dy = y + (h-dh)/2;
+  ctx.drawImage(src, dx, dy, dw, dh);
+  return {dx,dy,dw,dh};
+}
+function frameRect(ctx,x,y,w,h,color){
+  ctx.strokeStyle = color || 'rgba(242,193,78,.35)';
+  ctx.lineWidth = 2;
+  roundRect(ctx,x,y,w,h,14); ctx.stroke();
+}
+function text(ctx, str, x, y, size, color, weight){
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `${weight||'normal'} ${size}px Tahoma, "Segoe UI", sans-serif`;
+  ctx.fillStyle = color;
+  ctx.fillText(str, x, y);
+}
+
+function drawComposite(ctx, W, H){
+  paintBackground(ctx,W,H);
+  const tab = activeTab();
+
+  text(ctx, '🚶 محاكاة الحركة والسكون', W/2, H*0.075, H*0.065, '#f2c14e', 'bold');
+  text(ctx, TAB_TITLES[tab], W/2, H*0.145, H*0.038, '#9aa6c7');
+
+  const top = H*0.2, bottom = H*0.96;
+  const areaX = W*0.04, areaW = W*0.92, areaH = bottom-top;
+
+  if(tab==='relative'){
+    const ch = areaH*0.62;
+    const p = drawFit(ctx, tCanvas, areaX, top, areaW, ch);
+    frameRect(ctx, p.dx, p.dy, p.dw, p.dh);
+    const lines = [
+      ['بالنسبة للمراقب على الأرض:  القطار ' + groundStatusEls[0].textContent + '  •  الراكب ' + groundStatusEls[1].textContent + '  •  الكرة ' + groundStatusEls[2].textContent, '#4ecfa0'],
+      ['بالنسبة لراكب داخل القطار:  القطار والراكب والكرة جميعها ساكنة', '#5a9bd6'],
+      ['الحركة والسكون مفهومان نسبيان يعتمدان على الإطار المرجعي', '#f7dc8a']
+    ];
+    lines.forEach((l,i)=> text(ctx, l[0], W/2, top+ch+ areaH*0.1 + i*areaH*0.1, H*0.034, l[1], i===2?'bold':'normal'));
+  }
+  else if(tab==='types'){
+    const names = [...document.querySelectorAll('#panel-types .motion-card h3')].map(e=>e.textContent);
+    const cvs = ['canvas-uniform','canvas-accel','canvas-circular','canvas-oscillate'].map(id=>document.getElementById(id));
+    const gap = W*0.025;
+    const cw = (areaW-gap)/2, chh = (areaH-gap)/2;
+    cvs.forEach((c,i)=>{
+      const col = i%2, row = Math.floor(i/2);
+      // RTL: العمود الأول على اليمين
+      const x = areaX + (1-col)*(cw+gap);
+      const y = top + row*(chh+gap);
+      ctx.fillStyle = 'rgba(10,22,54,.9)';
+      roundRect(ctx,x,y,cw,chh,14); ctx.fill();
+      frameRect(ctx,x,y,cw,chh,'rgba(255,255,255,.12)');
+      text(ctx, names[i], x+cw/2, y+chh*0.12, H*0.036, '#f7dc8a', 'bold');
+      drawFit(ctx, c, x+cw*0.04, y+chh*0.22, cw*0.92, chh*0.74);
+    });
+  }
+  else {
+    const ch = areaH*0.8;
+    const p = drawFit(ctx, gCanvas, areaX, top, areaW, ch);
+    frameRect(ctx, p.dx, p.dy, p.dw, p.dh);
+    text(ctx, graphModes[graphSelect.value].label + ' — ' + graphModes[graphSelect.value].explain.split('.')[0], W/2, top+ch+areaH*0.1, H*0.03, '#f7dc8a');
+  }
+}
+
+// ---------- حفظ صورة ----------
+function downloadBlob(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+shotBtn.addEventListener('click', ()=>{
+  drawComposite(cctx, comp.width, comp.height);
+  comp.toBlob(b=>{ downloadBlob(b, 'harakat-sukun-'+activeTab()+'.png'); recStat.textContent='✅ تم حفظ الصورة'; }, 'image/png');
+});
+
+// ---------- صورة المعاينة لفيسبوك 1200×630 ----------
+ogBtn.addEventListener('click', ()=>{
+  const W=1200, H=630;
+  const oc = document.createElement('canvas'); oc.width=W; oc.height=H;
+  const o = oc.getContext('2d');
+  paintBackground(o,W,H);
+  // إطار ذهبي
+  o.strokeStyle='rgba(242,193,78,.6)'; o.lineWidth=4;
+  roundRect(o,18,18,W-36,H-36,24); o.stroke();
+  text(o, '🚶 محاكاة الحركة والسكون', W/2, 95, 70, '#f2c14e', 'bold');
+  text(o, 'افهم نسبية الحركة، وأنواعها، وتمثيلها البياني', W/2, 165, 34, '#9aa6c7');
+  // مشهد القطار
+  const p = drawFit(o, tCanvas, 70, 215, W-140, 270);
+  frameRect(o, p.dx, p.dy, p.dw, p.dh);
+  // الكلمات المفتاحية
+  const tags = ['نسبية الحركة','أنواع الحركة','الموقع – الزمن'];
+  tags.forEach((t,i)=>{
+    const cx = W/2 + (1-i)*340;
+    o.fillStyle='rgba(242,193,78,.15)';
+    roundRect(o,cx-150,520,300,64,32); o.fill();
+    o.strokeStyle='rgba(242,193,78,.5)'; o.lineWidth=2; o.stroke();
+    text(o, t, cx, 553, 32, '#f7dc8a', 'bold');
+  });
+  oc.toBlob(b=>{ downloadBlob(b,'preview.png'); recStat.textContent='✅ تم حفظ preview.png — ارفعه إلى المستودع hass'; }, 'image/png');
+});
+
+// ---------- تسجيل فيديو ----------
+let recorder = null, recChunks = [], recTimer = null, drawTimer = null, recUndo = null, recStart = 0;
+
+function pickMime(){
+  const list = ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  for(const m of list){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; }
+  return '';
+}
+
+function startAnimationForRecording(){
+  const tab = activeTab();
+  let started = false;
+  if(tab==='relative'){ if(!trainMoving){ trainToggle.click(); started = true; } return ()=>{ if(started && trainMoving) trainToggle.click(); }; }
+  if(tab==='types'){ if(!typesRunning){ typesToggle.click(); started = true; } return ()=>{ if(started && typesRunning) typesToggle.click(); }; }
+  if(!graphRunning){ graphPlay.click(); }
+  return ()=>{ if(graphRunning) graphPlay.click(); };
+}
+
+function stopRecording(){
+  if(recorder && recorder.state!=='inactive') recorder.stop();
+}
+
+recBtn.addEventListener('click', ()=>{
+  if(recorder && recorder.state==='recording'){ stopRecording(); return; }
+  if(!window.MediaRecorder || !comp.captureStream){
+    recStat.textContent = '⚠ متصفحك لا يدعم تسجيل الفيديو. جرّب Chrome أو Edge أو Firefox.';
+    return;
+  }
+  const mime = pickMime();
+  const seconds = parseInt(recDur.value,10);
+  const tab = activeTab();
+
+  recUndo = startAnimationForRecording();
+  recChunks = [];
+  const stream = comp.captureStream(30);
+  try{
+    recorder = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:4000000} : {videoBitsPerSecond:4000000});
+  }catch(e){
+    recorder = new MediaRecorder(stream);
+  }
+  recorder.ondataavailable = e=>{ if(e.data && e.data.size) recChunks.push(e.data); };
+  recorder.onstop = ()=>{
+    clearInterval(drawTimer); clearInterval(recTimer);
+    if(recUndo) recUndo();
+    recBtn.textContent = '🎥 تسجيل فيديو';
+    recBtn.classList.remove('rec');
+    const type = recorder.mimeType || mime || 'video/webm';
+    const ext = type.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(recChunks, {type});
+    downloadBlob(blob, 'harakat-sukun-'+tab+'.'+ext);
+    recStat.textContent = '✅ تم حفظ الفيديو (' + ext.toUpperCase() + ') — يمكنك نشره الآن على فيسبوك';
+  };
+
+  recBtn.textContent = '⏹ إيقاف التسجيل';
+  recBtn.classList.add('rec');
+  recStart = Date.now();
+
+  // رسم الإطار المركّب بانتظام (setInterval يعمل حتى لو انتقل المستخدم إلى تبويب آخر)
+  drawComposite(cctx, comp.width, comp.height);
+  drawTimer = setInterval(()=>{
+    if(tab==='graph' && !graphRunning){ graphPlay.click(); }
+    drawComposite(cctx, comp.width, comp.height);
+  }, 1000/30);
+
+  recorder.start(250);
+  recTimer = setInterval(()=>{
+    const el = (Date.now()-recStart)/1000;
+    recStat.innerHTML = '<span class="rec-dot"></span>جارٍ التسجيل… ' + Math.floor(el) + ' / ' + seconds + ' ث';
+    if(el >= seconds) stopRecording();
+  }, 200);
+});
 </script>
 </body>
 </html>
