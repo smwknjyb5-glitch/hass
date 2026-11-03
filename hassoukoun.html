@@ -1,0 +1,533 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>محاكاة الحركة والسكون</title>
+<style>
+  :root{
+    --navy-deep:#050b1f; --navy:#0a1636; --navy-light:#132048;
+    --gold:#f2c14e; --gold-soft:#f7dc8a; --text:#e8ecf7; --muted:#9aa6c7;
+    --accent:#4ecfa0; --red:#e8615a; --blue:#5a9bd6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background:radial-gradient(ellipse at top, var(--navy-light), var(--navy-deep) 70%);
+    color:var(--text); font-family:'Tahoma','Segoe UI',sans-serif;
+    overflow-x:hidden; position:relative;
+  }
+  #stars{position:fixed; inset:0; z-index:0; pointer-events:none;}
+  .wrap{position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:22px 16px 60px;}
+  header{text-align:center; margin-bottom:22px;}
+  header h1{color:var(--gold); font-size:1.9rem; margin:0 0 6px; text-shadow:0 0 18px rgba(242,193,78,.35);}
+  header p{color:var(--muted); margin:0; font-size:.95rem;}
+
+  .tabs{ display:flex; gap:10px; justify-content:center; margin-bottom:22px; flex-wrap:wrap; }
+  .tab-btn{
+    background:var(--navy-light); border:1px solid rgba(242,193,78,.25); color:var(--text);
+    padding:10px 20px; border-radius:30px; cursor:pointer; font-size:.9rem; transition:.25s;
+  }
+  .tab-btn.active{ background:var(--gold); color:var(--navy-deep); font-weight:bold; box-shadow:0 0 20px rgba(242,193,78,.4); }
+
+  .panel{ display:none; animation:fadeIn .4s ease; }
+  .panel.active{ display:block; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+  .card{
+    background:linear-gradient(160deg, rgba(19,32,72,.85), rgba(10,22,54,.9));
+    border:1px solid rgba(242,193,78,.2); border-radius:18px; padding:22px; margin-bottom:22px;
+    box-shadow:0 8px 30px rgba(0,0,0,.35);
+  }
+  .card h2{ margin-top:0; font-size:1.3rem; color:var(--gold); }
+
+  .toolbar{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:16px; }
+  .btn{
+    background:var(--navy-light); border:1px solid rgba(242,193,78,.35); color:var(--gold-soft);
+    padding:9px 20px; border-radius:24px; cursor:pointer; font-size:.9rem; transition:.2s;
+  }
+  .btn:hover{ background:rgba(242,193,78,.12); }
+  .btn.on{ background:var(--gold); color:var(--navy-deep); font-weight:bold; box-shadow:0 0 18px rgba(242,193,78,.4); }
+
+  canvas{
+    width:100%; background:var(--navy-deep); border-radius:14px; border:1px solid rgba(255,255,255,.08); display:block;
+  }
+
+  .frame-info{
+    display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;
+  }
+  @media(max-width:600px){ .frame-info{grid-template-columns:1fr;} }
+  .frame-box{ border-radius:12px; padding:14px; font-size:.88rem; line-height:1.7; }
+  .frame-box.ground{ background:rgba(78,207,160,.08); border:1px solid rgba(78,207,160,.35); }
+  .frame-box.vehicle{ background:rgba(90,155,214,.08); border:1px solid rgba(90,155,214,.35); }
+  .frame-box b{ color:var(--gold); }
+  .status-pill{
+    display:inline-block; padding:2px 10px; border-radius:20px; font-size:.8rem; font-weight:bold; margin-inline-start:6px;
+  }
+  .status-move{ background:rgba(232,97,90,.2); color:#ff9a90; }
+  .status-rest{ background:rgba(78,207,160,.2); color:var(--accent); }
+
+  .motion-grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-top:10px;
+  }
+  .motion-card{
+    background:var(--navy); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:14px;
+  }
+  .motion-card h3{ margin:0 0 8px; font-size:1rem; color:var(--gold-soft); }
+  .motion-card canvas{ height:140px; }
+  .motion-card p{ font-size:.8rem; color:var(--muted); line-height:1.6; margin:8px 0 0; }
+
+  .graph-controls{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; margin-bottom:14px; }
+  .graph-controls label{ font-size:.85rem; color:var(--muted); }
+  select{
+    background:var(--navy); color:var(--text); border:1px solid rgba(242,193,78,.3);
+    border-radius:8px; padding:6px 10px; font-family:Tahoma;
+  }
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="wrap">
+  <header>
+    <h1>🚶 محاكاة الحركة والسكون</h1>
+    <p>افهم نسبية الحركة، وأنواعها المختلفة، وكيف تُمثَّل بيانيًا</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="relative">نسبية الحركة والسكون</button>
+    <button class="tab-btn" data-tab="types">أنواع الحركة</button>
+    <button class="tab-btn" data-tab="graph">الرسم البياني (الموقع-الزمن)</button>
+  </div>
+
+  <!-- ===================== RELATIVE MOTION ===================== -->
+  <div class="panel active" id="panel-relative">
+    <div class="card">
+      <h2>🚂 نسبية الحركة: هل الجسم متحرك أم ساكن؟</h2>
+      <div class="toolbar">
+        <button class="btn" id="train-toggle">▶ تحريك القطار</button>
+        <button class="btn" id="relative-reset">إعادة تعيين</button>
+      </div>
+      <canvas id="train-canvas" width="900" height="260"></canvas>
+      <div class="frame-info">
+        <div class="frame-box ground">
+          <b>بالنسبة للمراقب على الأرض (الشجرة):</b><br>
+          القطار <span id="train-status-ground" class="status-pill status-rest">ساكن</span><br>
+          الراكب داخل القطار <span id="passenger-status-ground" class="status-pill status-rest">ساكن</span><br>
+          الكرة على الطاولة <span id="ball-status-ground" class="status-pill status-rest">ساكنة</span>
+        </div>
+        <div class="frame-box vehicle">
+          <b>بالنسبة لراكب داخل القطار:</b><br>
+          القطار نفسه <span class="status-pill status-rest">ساكن دائمًا (هو المرجع)</span><br>
+          الراكب الآخر بجانبه <span class="status-pill status-rest">ساكن</span><br>
+          الكرة على الطاولة <span class="status-pill status-rest">ساكنة</span>
+        </div>
+      </div>
+      <p style="color:var(--muted); font-size:.85rem; line-height:1.8; margin-top:14px;">
+        💡 <b>الخلاصة:</b> الحركة والسكون مفهومان نسبيان يعتمدان على <b>الإطار المرجعي</b> الذي نقيس بالنسبة إليه. الراكب ساكن بالنسبة لمقعده داخل القطار، لكنه متحرك بالنسبة لشخص واقف على الرصيف — رغم أنه لم يتغير شيء في وضعه داخل القطار!
+      </p>
+    </div>
+  </div>
+
+  <!-- ===================== TYPES OF MOTION ===================== -->
+  <div class="panel" id="panel-types">
+    <div class="card">
+      <h2>🔄 أنواع الحركة</h2>
+      <div class="toolbar">
+        <button class="btn" id="types-toggle">▶ تشغيل جميع الأمثلة</button>
+      </div>
+      <div class="motion-grid">
+        <div class="motion-card">
+          <h3>1. الحركة المستقيمة المنتظمة</h3>
+          <canvas id="canvas-uniform" width="280" height="140"></canvas>
+          <p>سرعة ثابتة على خط مستقيم — المسافة تزداد بمقدار متساوٍ في كل فترة زمنية متساوية.</p>
+        </div>
+        <div class="motion-card">
+          <h3>2. الحركة المتسارعة</h3>
+          <canvas id="canvas-accel" width="280" height="140"></canvas>
+          <p>السرعة تزداد (أو تقل) باستمرار، مثل سقوط جسم بفعل الجاذبية.</p>
+        </div>
+        <div class="motion-card">
+          <h3>3. الحركة الدائرية</h3>
+          <canvas id="canvas-circular" width="280" height="140"></canvas>
+          <p>الجسم يتحرك حول نقطة ثابتة بمسافة شعاعية ثابتة، مثل دوران عقارب الساعة.</p>
+        </div>
+        <div class="motion-card">
+          <h3>4. الحركة الاهتزازية (التذبذبية)</h3>
+          <canvas id="canvas-oscillate" width="280" height="140"></canvas>
+          <p>الجسم يتحرك ذهابًا وإيابًا حول نقطة اتزان، مثل حركة البندول أو الزنبرك.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== GRAPH ===================== -->
+  <div class="panel" id="panel-graph">
+    <div class="card">
+      <h2>📊 العلاقة بين الموقع والزمن</h2>
+      <div class="graph-controls">
+        <label>اختر حالة الجسم:</label>
+        <select id="graph-select">
+          <option value="rest">سكون (الموقع لا يتغير)</option>
+          <option value="uniform">حركة منتظمة (سرعة ثابتة)</option>
+          <option value="accel">حركة متسارعة</option>
+          <option value="decel">حركة متباطئة</option>
+        </select>
+        <button class="btn" id="graph-play">▶ تشغيل</button>
+      </div>
+      <canvas id="graph-canvas" width="850" height="380"></canvas>
+      <p id="graph-explain" style="color:var(--muted); font-size:.85rem; line-height:1.8; margin-top:12px;">
+        اختر حالة من القائمة أعلاه لمشاهدة شكل العلاقة بين الموقع (المسافة المقطوعة) والزمن، مع تحرك جسم توضيحي أسفل الرسم.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Starfield ----------
+const starsCanvas = document.getElementById('stars');
+const sctx = starsCanvas.getContext('2d');
+function resizeStars(){ starsCanvas.width = window.innerWidth; starsCanvas.height = document.body.scrollHeight; }
+let starList = [];
+function initStars(){
+  resizeStars(); starList = [];
+  const count = Math.floor((starsCanvas.width*starsCanvas.height)/9000);
+  for(let i=0;i<count;i++){
+    starList.push({x:Math.random()*starsCanvas.width,y:Math.random()*starsCanvas.height,r:Math.random()*1.4+0.3,a:Math.random(),speed:Math.random()*0.015});
+  }
+}
+function drawStars(){
+  sctx.clearRect(0,0,starsCanvas.width,starsCanvas.height);
+  for(const s of starList){
+    s.a += s.speed;
+    const alpha = Math.abs(Math.sin(s.a));
+    sctx.beginPath(); sctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    sctx.fillStyle = `rgba(242,193,78,${alpha*0.8})`; sctx.fill();
+  }
+  requestAnimationFrame(drawStars);
+}
+window.addEventListener('resize', initStars);
+initStars(); drawStars();
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ===================== RELATIVE MOTION SCENE =====================
+const tCanvas = document.getElementById('train-canvas');
+const tctx = tCanvas.getContext('2d');
+let trainX = 100;
+let trainMoving = false;
+let trainAnim = null;
+
+function drawTrainScene(){
+  const w = tCanvas.width, h = tCanvas.height;
+  tctx.clearRect(0,0,w,h);
+
+  // ground
+  tctx.strokeStyle = 'rgba(255,255,255,.2)';
+  tctx.lineWidth = 2;
+  tctx.beginPath(); tctx.moveTo(0,210); tctx.lineTo(w,210); tctx.stroke();
+
+  // rails ticks
+  tctx.strokeStyle = 'rgba(255,255,255,.1)';
+  for(let x=0;x<w;x+=30){
+    tctx.beginPath(); tctx.moveTo(x,210); tctx.lineTo(x+10,220); tctx.stroke();
+  }
+
+  // fixed tree (ground reference)
+  drawTree(780, 210);
+  drawPersonStanding(680, 210, 'مراقب على الأرض');
+
+  // train body
+  const tx = trainX;
+  tctx.fillStyle = '#22335f';
+  tctx.strokeStyle = '#3a4d8a';
+  tctx.lineWidth = 3;
+  roundRect(tctx, tx, 110, 220, 90, 14);
+  tctx.fill(); tctx.stroke();
+
+  // train windows
+  tctx.fillStyle = '#8fd6ff';
+  tctx.globalAlpha = .3;
+  tctx.fillRect(tx+20, 130, 60, 40);
+  tctx.fillRect(tx+140, 130, 60, 40);
+  tctx.globalAlpha = 1;
+
+  // wheels
+  tctx.fillStyle = '#111';
+  [tx+40, tx+180].forEach(wx=>{
+    tctx.beginPath(); tctx.arc(wx, 205, 16, 0, Math.PI*2); tctx.fill();
+  });
+
+  // passenger inside (fixed relative to train)
+  tctx.fillStyle = '#f2c14e';
+  tctx.beginPath(); tctx.arc(tx+50, 155, 9, 0, Math.PI*2); tctx.fill();
+  tctx.fillRect(tx+44, 164, 12, 20);
+
+  // small table + ball inside train
+  tctx.fillStyle = '#7a5a3a';
+  tctx.fillRect(tx+90, 175, 30, 4);
+  tctx.fillStyle = '#e8615a';
+  tctx.beginPath(); tctx.arc(tx+105, 168, 6, 0, Math.PI*2); tctx.fill();
+
+  tctx.fillStyle='#9aa6c7'; tctx.font='12px Tahoma'; tctx.textAlign='center';
+  tctx.fillText('القطار', tx+110, 100);
+}
+
+function drawTree(x,y){
+  tctx.fillStyle = '#6b4a2f';
+  tctx.fillRect(x-4, y-40, 8, 40);
+  tctx.fillStyle = '#3a6b3a';
+  tctx.beginPath(); tctx.arc(x, y-55, 22, 0, Math.PI*2); tctx.fill();
+}
+function drawPersonStanding(x,y,label){
+  tctx.fillStyle = '#4ecfa0';
+  tctx.beginPath(); tctx.arc(x, y-40, 8, 0, Math.PI*2); tctx.fill();
+  tctx.fillRect(x-6, y-32, 12, 25);
+  tctx.fillStyle='#9aa6c7'; tctx.font='11px Tahoma'; tctx.textAlign='center';
+  tctx.fillText(label, x, y+18);
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function animateTrain(){
+  trainX += 2.2;
+  if(trainX > tCanvas.width - 100){ trainX = -220; }
+  drawTrainScene();
+  trainAnim = requestAnimationFrame(animateTrain);
+}
+
+const trainToggle = document.getElementById('train-toggle');
+const relativeReset = document.getElementById('relative-reset');
+const groundStatusEls = [
+  document.getElementById('train-status-ground'),
+  document.getElementById('passenger-status-ground'),
+  document.getElementById('ball-status-ground')
+];
+
+trainToggle.addEventListener('click', ()=>{
+  trainMoving = !trainMoving;
+  if(trainMoving){
+    trainToggle.textContent = '⏸ إيقاف القطار';
+    trainToggle.classList.add('on');
+    groundStatusEls.forEach(el=>{ el.textContent = el===groundStatusEls[0]?'متحرك':(el===groundStatusEls[1]?'متحرك':'متحركة'); el.className='status-pill status-move'; });
+    animateTrain();
+  } else {
+    trainToggle.textContent = '▶ تحريك القطار';
+    trainToggle.classList.remove('on');
+    cancelAnimationFrame(trainAnim);
+    groundStatusEls.forEach(el=>{ el.textContent = el===groundStatusEls[2]?'ساكنة':'ساكن'; el.className='status-pill status-rest'; });
+  }
+});
+relativeReset.addEventListener('click', ()=>{
+  trainMoving=false;
+  cancelAnimationFrame(trainAnim);
+  trainX=100;
+  trainToggle.textContent='▶ تحريك القطار';
+  trainToggle.classList.remove('on');
+  groundStatusEls.forEach(el=>{ el.textContent = el===groundStatusEls[2]?'ساكنة':'ساكن'; el.className='status-pill status-rest'; });
+  drawTrainScene();
+});
+drawTrainScene();
+
+// ===================== TYPES OF MOTION =====================
+const canvasUniform = document.getElementById('canvas-uniform').getContext('2d');
+const canvasAccel = document.getElementById('canvas-accel').getContext('2d');
+const canvasCircular = document.getElementById('canvas-circular').getContext('2d');
+const canvasOscillate = document.getElementById('canvas-oscillate').getContext('2d');
+
+let typesRunning = false;
+let typesTime = 0;
+let typesAnim = null;
+
+function drawBall(ctx,x,y,color){
+  ctx.beginPath(); ctx.arc(x,y,9,0,Math.PI*2);
+  ctx.fillStyle = color; ctx.fill();
+}
+
+function drawTypesFrame(){
+  const t = typesTime;
+
+  // uniform: x = v*t mod width
+  canvasUniform.clearRect(0,0,280,140);
+  canvasUniform.strokeStyle='rgba(255,255,255,.15)';
+  canvasUniform.beginPath(); canvasUniform.moveTo(20,100); canvasUniform.lineTo(260,100); canvasUniform.stroke();
+  const ux = 20 + ((t*40) % 240);
+  drawBall(canvasUniform, ux, 100, '#4ecfa0');
+
+  // accelerated: x = 0.5*a*t^2 mod, reset periodically
+  canvasAccel.clearRect(0,0,280,140);
+  canvasAccel.strokeStyle='rgba(255,255,255,.15)';
+  canvasAccel.beginPath(); canvasAccel.moveTo(20,100); canvasAccel.lineTo(260,100); canvasAccel.stroke();
+  const at = t % 3.2;
+  const ax = 20 + 0.5*24*at*at;
+  drawBall(canvasAccel, Math.min(ax,260), 100, '#e8615a');
+
+  // circular
+  canvasCircular.clearRect(0,0,280,140);
+  const cx=140, cy=70, r=45;
+  canvasCircular.strokeStyle='rgba(255,255,255,.15)';
+  canvasCircular.beginPath(); canvasCircular.arc(cx,cy,r,0,Math.PI*2); canvasCircular.stroke();
+  const angle = t*1.8;
+  drawBall(canvasCircular, cx+r*Math.cos(angle), cy+r*Math.sin(angle), '#5a9bd6');
+
+  // oscillate (pendulum-like horizontal)
+  canvasOscillate.clearRect(0,0,280,140);
+  canvasOscillate.strokeStyle='rgba(255,255,255,.15)';
+  canvasOscillate.beginPath(); canvasOscillate.moveTo(20,100); canvasOscillate.lineTo(260,100); canvasOscillate.stroke();
+  const ox = 140 + 100*Math.sin(t*2.5);
+  drawBall(canvasOscillate, ox, 100, '#f2c14e');
+}
+
+function loopTypes(){
+  typesTime += 0.05;
+  drawTypesFrame();
+  typesAnim = requestAnimationFrame(loopTypes);
+}
+
+const typesToggle = document.getElementById('types-toggle');
+typesToggle.addEventListener('click', ()=>{
+  typesRunning = !typesRunning;
+  if(typesRunning){
+    typesToggle.textContent='⏸ إيقاف الأمثلة';
+    typesToggle.classList.add('on');
+    loopTypes();
+  } else {
+    typesToggle.textContent='▶ تشغيل جميع الأمثلة';
+    typesToggle.classList.remove('on');
+    cancelAnimationFrame(typesAnim);
+  }
+});
+drawTypesFrame();
+
+// ===================== POSITION-TIME GRAPH =====================
+const gCanvas = document.getElementById('graph-canvas');
+const gctx = gCanvas.getContext('2d');
+const graphSelect = document.getElementById('graph-select');
+const graphPlay = document.getElementById('graph-play');
+const graphExplain = document.getElementById('graph-explain');
+
+const graphModes = {
+  rest:{
+    label:'الجسم ساكن',
+    explain:'الموقع لا يتغير مع مرور الزمن، لذلك يكون الرسم خطًا أفقيًا ثابتًا. هذا هو التعريف الرياضي للسكون: x = ثابت.',
+    fx:(t)=> 0.5, // constant position (fraction of max)
+  },
+  uniform:{
+    label:'حركة منتظمة',
+    explain:'الموقع يزداد بمعدل ثابت مع الزمن، فينتج خط مستقيم مائل. الميل هنا يمثل السرعة الثابتة.',
+    fx:(t)=> t,
+  },
+  accel:{
+    label:'حركة متسارعة',
+    explain:'الموقع يزداد بمعدل متزايد (السرعة تكبر باستمرار)، فينتج منحنى يتصاعد بشكل أسرع مع الزمن (تربيعي).',
+    fx:(t)=> t*t,
+  },
+  decel:{
+    label:'حركة متباطئة',
+    explain:'الجسم يقترب من التوقف، فالموقع يزداد بمعدل متناقص حتى يستقر — منحنى يتسطح تدريجيًا.',
+    fx:(t)=> 1-(1-t)*(1-t),
+  }
+};
+
+let graphRunning = false;
+let graphAnim = null;
+let graphT = 0;
+
+function drawGraph(progress){
+  const w=gCanvas.width, h=gCanvas.height;
+  gctx.clearRect(0,0,w,h);
+  const pad=55;
+  const mode = graphModes[graphSelect.value];
+
+  // axes
+  gctx.strokeStyle='rgba(255,255,255,.25)';
+  gctx.lineWidth=1.5;
+  gctx.beginPath();
+  gctx.moveTo(pad,h-pad-60); gctx.lineTo(w-30,h-pad-60);
+  gctx.moveTo(pad,h-pad-60); gctx.lineTo(pad,20);
+  gctx.stroke();
+  gctx.fillStyle='#9aa6c7'; gctx.font='13px Tahoma';
+  gctx.fillText('الزمن (t)', w-70, h-pad-40);
+  gctx.fillText('الموقع (x)', pad-40, 25);
+
+  const plotW = w-pad-40, plotH = h-pad-60-30;
+
+  // curve
+  gctx.strokeStyle = '#f2c14e';
+  gctx.lineWidth = 3;
+  gctx.beginPath();
+  for(let i=0;i<=100;i++){
+    const tt = i/100;
+    const yv = mode.fx(tt);
+    const px = pad + tt*plotW;
+    const py = (h-pad-60) - yv*plotH;
+    if(i===0) gctx.moveTo(px,py); else gctx.lineTo(px,py);
+  }
+  gctx.stroke();
+
+  // moving point on curve
+  const yv = mode.fx(progress);
+  const px = pad + progress*plotW;
+  const py = (h-pad-60) - yv*plotH;
+  gctx.fillStyle='#4ecfa0';
+  gctx.beginPath(); gctx.arc(px,py,7,0,Math.PI*2); gctx.fill();
+
+  // track below showing object moving along a line, mapped from x value
+  const trackY = h-30;
+  gctx.strokeStyle='rgba(255,255,255,.15)';
+  gctx.beginPath(); gctx.moveTo(pad, trackY); gctx.lineTo(w-30, trackY); gctx.stroke();
+  const objX = pad + yv*plotW;
+  gctx.fillStyle='#e8615a';
+  gctx.beginPath(); gctx.arc(objX, trackY, 8, 0, Math.PI*2); gctx.fill();
+}
+
+function loopGraph(){
+  graphT += 0.006;
+  if(graphT>1){ graphT=1; graphRunning=false; graphPlay.textContent='▶ تشغيل'; graphPlay.classList.remove('on'); cancelAnimationFrame(graphAnim); drawGraph(graphT); return; }
+  drawGraph(graphT);
+  graphAnim = requestAnimationFrame(loopGraph);
+}
+
+graphSelect.addEventListener('change', ()=>{
+  graphT=0;
+  graphRunning=false;
+  cancelAnimationFrame(graphAnim);
+  graphPlay.textContent='▶ تشغيل';
+  graphPlay.classList.remove('on');
+  graphExplain.textContent = graphModes[graphSelect.value].explain;
+  drawGraph(0);
+});
+
+graphPlay.addEventListener('click', ()=>{
+  graphRunning = !graphRunning;
+  if(graphRunning){
+    graphT=0;
+    graphPlay.textContent='⏸ إيقاف';
+    graphPlay.classList.add('on');
+    loopGraph();
+  } else {
+    graphPlay.textContent='▶ تشغيل';
+    graphPlay.classList.remove('on');
+    cancelAnimationFrame(graphAnim);
+  }
+});
+
+graphExplain.textContent = graphModes.rest.explain;
+drawGraph(0);
+</script>
+</body>
+</html>
